@@ -9,6 +9,14 @@
   "agents": {
     "timeout": 300,
     "framework": "openai-agents-sdk",
+
+    "auth": {
+      "algorithm": "RS256",
+      "verificationKeys": [
+        "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvNYA5JN8+XnytNVZzppj\n/vaHgTmlOHY+HZO8zjebnfgqYOxRFajWfwEPaa8z5o8aB7RITxbhU9rMwcauDh8E\neZg/b9CWkjlGCTici7hvE2v6DNQ6lqTSYJFIxaQyvnPPHo0kW5xZAtU+QYbdO/RI\n56ouWUaBh28afuIfUAuYpSPb/3EmyhpE54PPC7OijnHk8sVhKsggtaeNDrx2f3Ac\npt0JJIuRLRUKb5q7dkEFF68nF21ISC3pmrw3ONzmmNXiNG5yKkgilCnNIJV8xHA0\n/Y3Guf3zsAJV39YUrcDqDX2b/wbJW4sQ7qNGvmH06H1E0r6bEExk4HwV8XbW9ggE\nfQIDAQAB\n-----END PUBLIC KEY-----"
+      ]
+    },
+
     "sandbox": {
       "timeout": 300
     }

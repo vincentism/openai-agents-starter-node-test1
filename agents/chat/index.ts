@@ -1,9 +1,11 @@
 /**
- * Agent handler — EdgeOne Makers
+ * chat agent route — EdgeOne Makers
  * ========================================
  *
- * File path agents/chat/index.ts maps to **POST /chat**
- * (EdgeOne Makers routing convention: directory name = route, index = default entry)
+ * File path agents/chat/index.ts maps to **POST /chat**, and is
+ * auto-registered as the MCP tool `chat` by the runtime
+ * (EdgeOne Makers routing convention: directory name = route, index = default entry;
+ * see `agents.mcp` in edgeone.json).
  *
  * Files starting with _ (e.g. _tools.ts, _sse.ts) are private modules,
  * not mapped as public routes.
@@ -11,8 +13,14 @@
  * context convention:
  *   context.request.body    — object, request body
  *   context.request.signal  — AbortSignal, set when /chat/stop is called
- *   conversation_id — conversation ID
+ *   context.conversation_id — conversation ID
  *   context.runId           — current run ID
+ *
+ * @mcp_description 与 AI 对话，支持自定义工具、流式响应与会话记忆的 Agent 示例
+ * @mcp_parameters
+ *   message: { "type": "string", "description": "用户发送给 AI 的消息内容", "required": true }
+ *   userId: { "type": "string", "description": "用户 ID，用于会话归属与历史索引" }
+ *   userMsgId: { "type": "string", "description": "用户消息 ID，用于消息去重与追踪" }
  */
 
 import type { AgentContext } from '@edgeone/types';
