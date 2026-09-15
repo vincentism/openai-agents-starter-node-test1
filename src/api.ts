@@ -27,6 +27,67 @@ export const API = {
   deleteConversation: '/delete-conversation', // Permanently delete a conversation
 } as const;
 
+// ---------------------------------------------------------------------------
+// Auth (JWT)
+//
+// The backend agent is protected by JWT auth configured in edgeone.json
+// (`agents.auth`). The edge controller validates `Authorization: Bearer <jwt>`
+// on EVERY agent/backend route (/chat, /stop, /history, ...) — a request
+// without it is rejected with `missing-bearer` before it ever reaches the
+// handler.
+//
+// Best practice: keep token access in ONE place. All requests below call
+// `authHeaders()`, so injecting / rotating / refreshing the token only ever
+// touches this module.
+//
+// Token source (in priority order):
+//   1. runtime override set via `setAgentToken()` (e.g. after a login flow)
+//   2. build-time env `VITE_AGENT_TOKEN` (never hardcode a token in source)
+//
+// The token MUST be signed by the private key matching one of the public keys
+// in edgeone.json `agents.auth.verificationKeys` (asymmetric, e.g. RS256).
+// The signing private key stays server-side; the frontend only holds a
+// short-lived issued JWT.
+// ---------------------------------------------------------------------------
+
+let runtimeAgentToken = '';
+
+/** Set the agent JWT at runtime (e.g. after login). Overrides the env token. */
+export function setAgentToken(token: string): void {
+  runtimeAgentToken = token || '';
+}
+
+/** Resolve the current agent JWT. Returns '' when none is available. */
+export function getAgentToken(): string {
+  if (runtimeAgentToken) return runtimeAgentToken;
+  const envToken = import.meta.env?.VITE_AGENT_TOKEN;
+  return typeof envToken === 'string' ? envToken : '';
+}
+
+/**
+ * Build request headers with the Authorization bearer injected.
+ * Pass any route-specific headers in `extra`; Authorization is added last so
+ * it is always present (unless there is genuinely no token configured).
+ */
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(extra || {}),
+  };
+  const token = getAgentToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  } else if (import.meta.env?.DEV) {
+    // Surface the misconfiguration early in dev instead of a confusing
+    // "backend not running" once the edge controller returns missing-bearer.
+    console.warn(
+      '[auth] No agent token configured. Set VITE_AGENT_TOKEN or call setAgentToken(). ' +
+        'Requests will be rejected by the edge controller with "missing-bearer".',
+    );
+  }
+  return headers;
+}
+
 export interface RawSseEvent {
   eventType: string;
   data: unknown;
@@ -53,9 +114,7 @@ export async function fetchConversationHistory(
   try {
     const res = await fetch(API.history, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders(),
       body: JSON.stringify({ conversation_id: conversationId, user_id: userId }),
     });
 
@@ -95,9 +154,7 @@ export function sendMessageStream(
 
   (async () => {
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      const headers = authHeaders();
       if (conversationId) {
         headers['makers-conversation-id'] = conversationId;
       }
@@ -238,9 +295,7 @@ export async function stopAgent(conversationId?: string): Promise<boolean> {
      * but chat not actually aborting, revisit this and use a different
      * cancellation channel.
      */
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers = authHeaders();
     if (conversationId) {
       headers['makers-conversation-id'] = conversationId;
     }
@@ -265,7 +320,7 @@ export async function clearConversationHistory(
   try {
     const res = await fetch(API.clearHistory, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ conversation_id: conversationId, user_id: userId }),
     });
     return res.ok;
@@ -289,7 +344,7 @@ export async function listConversations(
   try {
     const res = await fetch(API.conversations, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({
         user_id: params.userId,
         limit: params.limit,
@@ -329,7 +384,7 @@ export async function deleteConversation(
   try {
     const res = await fetch(API.deleteConversation, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ conversation_id: conversationId, user_id: userId }),
     });
     return res.ok;
